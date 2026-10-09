@@ -60,7 +60,12 @@ func TestDropPathsOnlyExistingFiles(t *testing.T) {
 	if got := dropPaths("'" + one + "' " + two); len(got) != 2 || got[0] != one || got[1] != two {
 		t.Fatalf("quoted pair=%q", got)
 	}
-	if got := dropPaths("file://" + one); len(got) != 1 || got[0] != one {
+	// file URIs always use '/' and, for drive paths, a leading slash.
+	uri := "file://" + filepath.ToSlash(one)
+	if !strings.HasPrefix(filepath.ToSlash(one), "/") {
+		uri = "file:///" + filepath.ToSlash(one)
+	}
+	if got := dropPaths(uri); len(got) != 1 || filepath.Clean(got[0]) != one {
 		t.Fatalf("uri=%q", got)
 	}
 	// Plain text and non-existent paths keep normal paste behavior.

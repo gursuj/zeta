@@ -141,7 +141,7 @@ func TestDisplayPath(t *testing.T) {
 		t.Fatalf("home = %q", got)
 	}
 	nested := filepath.Join(home, "code", "zeta")
-	if got := DisplayPath(nested); got != "~/code/zeta" {
+	if got := DisplayPath(nested); got != filepath.Join("~", "code", "zeta") {
 		t.Fatalf("nested = %q", got)
 	}
 	if got := DisplayPath("/tmp/x"); got != "/tmp/x" {

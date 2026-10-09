@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -195,7 +196,8 @@ func TestApplyUpdates(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if fi.Mode()&0o111 == 0 {
+	// Windows has no exec bit.
+	if fi.Mode()&0o111 == 0 && runtime.GOOS != "windows" {
 		t.Fatalf("not executable: %v", fi.Mode())
 	}
 }

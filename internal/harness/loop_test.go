@@ -360,13 +360,16 @@ func TestSteerKeepsTurnGoingAfterFinalAnswer(t *testing.T) {
 func TestToolLabelEditShowsWorkspacePath(t *testing.T) {
 	root := t.TempDir()
 	abs := filepath.Join(root, "internal", "x.go")
+	outside := filepath.Join(filepath.VolumeName(root)+string(filepath.Separator), "etc", "hosts")
+	// Marshal so Windows backslashes are escaped in the JSON.
+	q := func(s string) string { b, _ := json.Marshal(s); return string(b) }
 	cases := []struct {
 		name, args, want string
 	}{
-		{tools.Edit, `{"path":"` + abs + `","old_string":"a","new_string":"b"}`, "edit internal/x.go"},
+		{tools.Edit, `{"path":` + q(abs) + `,"old_string":"a","new_string":"b"}`, "edit internal/x.go"},
 		{tools.Edit, `{"path":"internal/x.go","old_string":"","new_string":"b"}`, "create internal/x.go"},
-		{tools.Write, `{"path":"` + abs + `","content":"b"}`, "write internal/x.go"},
-		{tools.Edit, `{"path":"/etc/hosts","old_string":"a","new_string":"b"}`, "edit /etc/hosts"},
+		{tools.Write, `{"path":` + q(abs) + `,"content":"b"}`, "write internal/x.go"},
+		{tools.Edit, `{"path":` + q(outside) + `,"old_string":"a","new_string":"b"}`, "edit " + outside},
 	}
 	for _, tc := range cases {
 		if got := toolLabel(tools.Build(), root, tc.name, json.RawMessage(tc.args)); got != tc.want {

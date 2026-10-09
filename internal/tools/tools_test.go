@@ -735,12 +735,15 @@ func TestDisplayTarget(t *testing.T) {
 	if err != nil || home == "" {
 		t.Skip("no home dir")
 	}
+	// A rooted path with no drive letter is relative on Windows, so build the
+	// outside path from the temp dir's volume.
+	outside := filepath.Join(filepath.VolumeName(root)+string(filepath.Separator), "etc", "hosts")
 	cases := []struct{ in, want string }{
 		{"a/b.go", "a/b.go"},
 		{filepath.Join(root, "a", "b.go"), "a/b.go"},
 		{"./a/../b.go", "b.go"},
 		{filepath.Join(home, "notes", "x.md"), "~/notes/x.md"},
-		{"/etc/hosts", "/etc/hosts"},
+		{outside, outside},
 		{"", ""},
 	}
 	for _, tc := range cases {
