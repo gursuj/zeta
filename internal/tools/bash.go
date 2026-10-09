@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"time"
 )
@@ -27,7 +26,7 @@ const Bash = "bash"
 
 func (bashTool) Name() string { return Bash }
 func (bashTool) Description() string {
-	return "Run a shell command via the user's default shell ($SHELL). " +
+	return "Run a shell command via " + shellDesc + ". " +
 		"Working directory defaults to the workspace root; optional workdir must exist inside it " +
 		"(cwd convenience only — the command is not sandboxed and can reach the rest of the host). " +
 		"Prefer read/edit/grep for file ops; use bash for tests, builds, and process work."
@@ -116,9 +115,8 @@ func (bashTool) Run(ctx context.Context, root string, raw json.RawMessage) (stri
 	runCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	shell := userShell()
 	buf := &cappedBuffer{limit: maxBashBytes, onUpdate: progressFrom(ctx)}
-	cmd := exec.CommandContext(runCtx, shell, "-c", args.Command)
+	cmd := shellCommand(runCtx, args.Command)
 	cmd.Dir = dir
 	cmd.Stdout = buf
 	cmd.Stderr = buf
@@ -138,23 +136,6 @@ func (bashTool) Run(ctx context.Context, root string, raw json.RawMessage) (stri
 		}
 	}
 	return withExit(out, status), nil
-}
-
-// userShell returns $SHELL when it looks usable, else bash, else sh.
-func userShell() string {
-	if s := strings.TrimSpace(os.Getenv("SHELL")); s != "" {
-		if filepath.IsAbs(s) {
-			if _, err := os.Stat(s); err == nil {
-				return s
-			}
-		} else if p, err := exec.LookPath(s); err == nil {
-			return p
-		}
-	}
-	if p, err := exec.LookPath("bash"); err == nil {
-		return p
-	}
-	return "sh"
 }
 
 func withExit(out, status string) string {
