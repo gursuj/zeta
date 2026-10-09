@@ -1,8 +1,10 @@
 package tools
 
 import (
+	"bytes"
 	"context"
 	"os"
+	"os/exec"
 	"strings"
 	"testing"
 	"time"
@@ -48,5 +50,32 @@ func TestBashTimeoutKillsChildren(t *testing.T) {
 	}
 	if d := time.Since(start); d > 10*time.Second {
 		t.Fatalf("took %s, child likely survived", d)
+	}
+}
+
+// The fallback shells go through different argv handling than bash, so run a
+// quoted command through each to prove the invocation works.
+func TestFallbackShellsRun(t *testing.T) {
+	cases := []struct {
+		name, shell, script, want string
+	}{
+		{"pwsh", "pwsh", `Write-Output 'a b'`, "a b"},
+		{"powershell", "powershell", `Write-Output 'a b'`, "a b"},
+		{"cmd", "cmd", `echo "a b"`, `"a b"`},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if _, err := exec.LookPath(tc.shell); err != nil {
+				t.Skipf("%s not installed", tc.shell)
+			}
+			t.Setenv("SHELL", tc.shell)
+			var buf bytes.Buffer
+			if err := runShell(context.Background(), tc.script, t.TempDir(), &buf); err != nil {
+				t.Fatalf("run: %v (out %q)", err, buf.String())
+			}
+			if got := strings.TrimSpace(buf.String()); got != tc.want {
+				t.Fatalf("got %q, want %q", got, tc.want)
+			}
+		})
 	}
 }
