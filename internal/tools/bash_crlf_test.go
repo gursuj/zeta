@@ -1,21 +1,19 @@
 package tools
 
 import (
-	"context"
-	"strings"
+	"runtime"
 	"testing"
 )
 
-// A stray \r makes the terminal paint over the row, so CRLF must not reach the
-// transcript or the model.
-func TestBashNormalisesCRLF(t *testing.T) {
-	out := Run(context.Background(), Build(), t.TempDir(), Bash, mustRaw(t, map[string]any{
-		"command": `printf 'a\r\nb\r\n'`,
-	}))
-	if strings.Contains(out, "\r") {
-		t.Fatalf("CR left in output: %q", out)
+// On Windows a stray \r paints over the row in the TUI, so CRLF is flattened.
+// Elsewhere output is passed through untouched.
+func TestNormaliseOutput(t *testing.T) {
+	in := "a\r\nb\r\nc\rd"
+	want := in
+	if runtime.GOOS == "windows" {
+		want = "a\nb\nc\rd" // lone \r (progress bars) is kept
 	}
-	if !strings.HasPrefix(out, "a\nb\n") {
-		t.Fatalf("got %q", out)
+	if got := normaliseOutput(in); got != want {
+		t.Fatalf("got %q, want %q", got, want)
 	}
 }

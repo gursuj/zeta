@@ -14,6 +14,9 @@ import (
 // shellDesc names the shell in the bash tool description.
 const shellDesc = "the user's default shell ($SHELL)"
 
+// normaliseOutput leaves command output as the shell wrote it.
+func normaliseOutput(s string) string { return s }
+
 // runShell runs script in the user's shell from dir, sending stdout and stderr
 // to out. ctx cancellation kills the shell.
 func runShell(ctx context.Context, script, dir string, out io.Writer) error {

@@ -25,6 +25,11 @@ const (
 	kindCmd
 )
 
+// normaliseOutput turns CRLF into LF. Windows programs end lines with \r\n,
+// and a stray \r makes the terminal return to column 0 and paint over the
+// text, so the row looks empty in the TUI.
+func normaliseOutput(s string) string { return strings.ReplaceAll(s, "\r\n", "\n") }
+
 // runShell runs script in the best shell found, from dir, sending stdout and
 // stderr to out. ctx cancellation kills the shell and everything it started.
 func runShell(ctx context.Context, script, dir string, out io.Writer) error {
