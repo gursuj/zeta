@@ -2,11 +2,16 @@ package tools
 
 import (
 	"context"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"syscall"
+	"time"
+
+	"golang.org/x/sys/windows"
 )
 
 // shellDesc names the shell in the bash tool description.
@@ -19,6 +24,60 @@ const (
 	kindPowerShell
 	kindCmd
 )
+
+// runShell runs script in the best shell found, from dir, sending stdout and
+// stderr to out. ctx cancellation kills the shell and everything it started.
+func runShell(ctx context.Context, script, dir string, out io.Writer) error {
+	c := shellCommand(ctx, script)
+	c.Dir = dir
+	c.Stdout = out
+	c.Stderr = out
+
+	// By default Go kills only the shell, so a child like `go test` keeps
+	// running and holds the output pipe open, leaving Wait blocked. A job object
+	// tracks the whole tree, even through Git Bash's own process model, which
+	// taskkill /T cannot follow.
+	var job atomic.Uintptr
+	c.Cancel = func() error {
+		if h := windows.Handle(job.Load()); h != 0 {
+			if err := windows.TerminateJobObject(h, 1); err == nil {
+				return nil
+			}
+		}
+		return c.Process.Kill()
+	}
+	// Backstop: if something still holds the pipe, stop waiting for it.
+	c.WaitDelay = 2 * time.Second
+
+	if err := c.Start(); err != nil {
+		return err
+	}
+	if h, err := newJob(c.Process.Pid); err == nil {
+		job.Store(uintptr(h))
+		defer windows.CloseHandle(h)
+	}
+	return c.Wait()
+}
+
+// newJob creates a job object holding the process pid. Children it starts
+// afterwards join the job automatically.
+func newJob(pid int) (windows.Handle, error) {
+	h, err := windows.CreateJobObject(nil, nil)
+	if err != nil {
+		return 0, err
+	}
+	p, err := windows.OpenProcess(windows.PROCESS_SET_QUOTA|windows.PROCESS_TERMINATE, false, uint32(pid))
+	if err != nil {
+		_ = windows.CloseHandle(h)
+		return 0, err
+	}
+	defer windows.CloseHandle(p)
+	if err := windows.AssignProcessToJobObject(h, p); err != nil {
+		_ = windows.CloseHandle(h)
+		return 0, err
+	}
+	return h, nil
+}
 
 // shellCommand builds the command that runs script in the best shell found.
 func shellCommand(ctx context.Context, script string) *exec.Cmd {

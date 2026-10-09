@@ -1,9 +1,11 @@
 package tools
 
 import (
+	"context"
 	"os"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestKindOf(t *testing.T) {
@@ -30,5 +32,21 @@ func TestFindShellSkipsWSLBash(t *testing.T) {
 	}
 	if path == "" {
 		t.Fatal("no shell found")
+	}
+}
+
+// A timed-out command must take its child processes with it. Without the
+// tree kill, the orphaned sleep holds the output pipe and Run blocks ~30s.
+func TestBashTimeoutKillsChildren(t *testing.T) {
+	root := t.TempDir()
+	start := time.Now()
+	out := Run(context.Background(), Build(), root, Bash, mustRaw(t, map[string]any{
+		"command": "sleep 30; echo done", "timeout_ms": 500,
+	}))
+	if !strings.Contains(out, "exit: timeout") {
+		t.Fatalf("want timeout, got %q", out)
+	}
+	if d := time.Since(start); d > 10*time.Second {
+		t.Fatalf("took %s, child likely survived", d)
 	}
 }

@@ -116,11 +116,7 @@ func (bashTool) Run(ctx context.Context, root string, raw json.RawMessage) (stri
 	defer cancel()
 
 	buf := &cappedBuffer{limit: maxBashBytes, onUpdate: progressFrom(ctx)}
-	cmd := shellCommand(runCtx, args.Command)
-	cmd.Dir = dir
-	cmd.Stdout = buf
-	cmd.Stderr = buf
-	err = cmd.Run()
+	err = runShell(runCtx, args.Command, dir, buf)
 
 	out := buf.String()
 

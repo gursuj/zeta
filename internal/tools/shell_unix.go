@@ -4,6 +4,7 @@ package tools
 
 import (
 	"context"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,9 +14,14 @@ import (
 // shellDesc names the shell in the bash tool description.
 const shellDesc = "the user's default shell ($SHELL)"
 
-// shellCommand builds the command that runs script in the user's shell.
-func shellCommand(ctx context.Context, script string) *exec.Cmd {
-	return exec.CommandContext(ctx, userShell(), "-c", script)
+// runShell runs script in the user's shell from dir, sending stdout and stderr
+// to out. ctx cancellation kills the shell.
+func runShell(ctx context.Context, script, dir string, out io.Writer) error {
+	c := exec.CommandContext(ctx, userShell(), "-c", script)
+	c.Dir = dir
+	c.Stdout = out
+	c.Stderr = out
+	return c.Run()
 }
 
 // userShell returns $SHELL when it looks usable, else bash, else sh.
