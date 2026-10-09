@@ -38,6 +38,10 @@ jobs:
             goarch: amd64
           - goos: darwin
             goarch: arm64
+          - goos: windows
+            goarch: amd64
+          - goos: windows
+            goarch: arm64
 
     steps:
       - uses: actions/checkout@v5
@@ -55,6 +59,9 @@ jobs:
         run: |
           VERSION="${VERSION#v}"
           name="zeta-${VERSION}-${GOOS}-${GOARCH}"
+          if [ "$GOOS" = "windows" ]; then
+            name="${name}.exe"
+          fi
           go build -trimpath \
             -ldflags "-s -w -X github.com/axispx/zeta/internal/version.Version=${VERSION}" \
             -o "dist/${name}" ./cmd/zeta
