@@ -79,12 +79,17 @@ func newJob(pid int) (windows.Handle, error) {
 	return h, nil
 }
 
+// psPlainOutput stops PowerShell 7 colouring output and errors, whose escape
+// codes would reach the model as noise. Windows PowerShell 5.1 has no $PSStyle,
+// hence the guard.
+const psPlainOutput = "if ($PSStyle) { $PSStyle.OutputRendering = 'PlainText' }; "
+
 // shellCommand builds the command that runs script in the best shell found.
 func shellCommand(ctx context.Context, script string) *exec.Cmd {
 	path, kind := findShell()
 	switch kind {
 	case kindPowerShell:
-		return exec.CommandContext(ctx, path, "-NoProfile", "-NonInteractive", "-Command", script)
+		return exec.CommandContext(ctx, path, "-NoProfile", "-NonInteractive", "-Command", psPlainOutput+script)
 	case kindCmd:
 		c := exec.CommandContext(ctx, path)
 		// Go's default argv quoting breaks cmd.exe, which parses its own line.

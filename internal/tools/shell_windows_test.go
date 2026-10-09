@@ -79,3 +79,24 @@ func TestFallbackShellsRun(t *testing.T) {
 		})
 	}
 }
+
+// PowerShell 7 colours errors even when piped. The escape codes must not reach
+// the model.
+func TestPowerShellOutputHasNoColourCodes(t *testing.T) {
+	for _, shell := range []string{"pwsh", "powershell"} {
+		t.Run(shell, func(t *testing.T) {
+			if _, err := exec.LookPath(shell); err != nil {
+				t.Skipf("%s not installed", shell)
+			}
+			t.Setenv("SHELL", shell)
+			var buf bytes.Buffer
+			_ = runShell(context.Background(), "Get-ChildItem -NoSuchParam; Get-Location", t.TempDir(), &buf)
+			if strings.Contains(buf.String(), "") {
+				t.Fatalf("escape codes in output: %q", buf.String())
+			}
+			if buf.Len() == 0 {
+				t.Fatal("no output")
+			}
+		})
+	}
+}
