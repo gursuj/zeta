@@ -188,7 +188,7 @@ func defaultHTTPClient() *http.Client {
 
 func checkSupported(opts Options) error {
 	switch opts.GOOS {
-	case "darwin", "linux":
+	case "darwin", "linux", "windows":
 	default:
 		return fmt.Errorf("unsupported OS %q", opts.GOOS)
 	}
@@ -204,7 +204,11 @@ func checkSupported(opts Options) error {
 }
 
 func assetName(version, goos, goarch string) string {
-	return fmt.Sprintf("zeta-%s-%s-%s", version, goos, goarch)
+	name := fmt.Sprintf("zeta-%s-%s-%s", version, goos, goarch)
+	if goos == "windows" {
+		name += ".exe"
+	}
+	return name
 }
 
 // release is the GitHub release JSON we care about.
@@ -351,7 +355,7 @@ func replaceFile(path string, data []byte, mode os.FileMode) error {
 	if err := f.Close(); err != nil {
 		return err
 	}
-	if err := os.Rename(tmp, path); err != nil {
+	if err := swapIn(tmp, path); err != nil {
 		return fmt.Errorf("cannot replace %s: %w", path, err)
 	}
 	ok = true

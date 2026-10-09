@@ -71,6 +71,9 @@ func TestAssetName(t *testing.T) {
 	if got := assetName("0.11.0", "darwin", "arm64"); got != "zeta-0.11.0-darwin-arm64" {
 		t.Fatal(got)
 	}
+	if got := assetName("0.11.0", "windows", "amd64"); got != "zeta-0.11.0-windows-amd64.exe" {
+		t.Fatal(got)
+	}
 }
 
 func TestIsDev(t *testing.T) {
@@ -100,7 +103,7 @@ func TestApplyUnsupported(t *testing.T) {
 	_, err := Apply(context.Background(), Options{
 		Current: "0.1.0",
 		Target:  filepath.Join(t.TempDir(), "zeta"),
-		GOOS:    "windows",
+		GOOS:    "freebsd",
 		GOARCH:  "amd64",
 	})
 	if err == nil || !strings.Contains(err.Error(), "unsupported OS") {
