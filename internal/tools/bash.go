@@ -118,7 +118,9 @@ func (bashTool) Run(ctx context.Context, root string, raw json.RawMessage) (stri
 	buf := &cappedBuffer{limit: maxBashBytes, onUpdate: progressFrom(ctx)}
 	err = runShell(runCtx, args.Command, dir, buf)
 
-	out := buf.String()
+	// Windows programs end lines with \r\n. A stray \r makes the terminal return
+	// to column 0 and paint over the text, so the row looks empty in the TUI.
+	out := strings.ReplaceAll(buf.String(), "\r\n", "\n")
 
 	status := "exit: 0"
 	if runCtx.Err() == context.DeadlineExceeded {
