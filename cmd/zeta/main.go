@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"syscall"
 
 	tea "charm.land/bubbletea/v2"
 
@@ -120,14 +119,4 @@ func runUpdate(w io.Writer) error {
 	}
 	fmt.Fprintf(w, "Updated %s → %s\n", res.From, res.To)
 	return nil
-}
-
-// relaunch replaces this process with a fresh zeta so the terminal is handed to
-// the just-installed binary. Only returns on failure.
-func relaunch() error {
-	exe, err := update.Executable()
-	if err != nil {
-		return err
-	}
-	return syscall.Exec(exe, os.Args, os.Environ())
 }
